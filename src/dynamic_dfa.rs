@@ -1,4 +1,4 @@
-use serde_json::Value;
+use serde_json::{Value};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
@@ -25,6 +25,28 @@ fn get_tokens(json: &Value) -> Vec<String> {
     }
 
     tokens
+}
+
+fn get_grammar_table()
+-> HashMap<String, HashMap<String,String>>{
+    let mut grammar_table: HashMap<String, HashMap<String,String>> = HashMap::new();
+    let mut row: HashMap<String,String> = HashMap::new();
+//  |                       id                         |                              +                               |                        *                           |                       (                         |                         )                           |                       $                         |
+    row.insert("i".to_string(),"XT".to_string());      row.insert("+".to_string(),"Error: Expected 'id' before '+' token".to_string());  row.insert("*".to_string(),"Error 5".to_string());    row.insert("(".to_string(),"XT".to_string());       row.insert(")".to_string(),"Error: missing '(' token or expression".to_string());    row.insert("$".to_string(),"Error: missing expressions".to_string());
+    grammar_table.insert("E".to_string(),row);
+    row = HashMap::new();
+    row.insert("i".to_string(),"Error 1".to_string());   row.insert("+".to_string(),"XT+".to_string());                  row.insert("*".to_string(),"Error 6".to_string());    row.insert("(".to_string(),"Error 10".to_string());    row.insert(")".to_string(),"".to_string());         row.insert("$".to_string(),"".to_string());
+    grammar_table.insert("X".to_string(),row);
+    row = HashMap::new();
+    row.insert("i".to_string(),"YF".to_string());      row.insert("+".to_string(),"Error: double '+' token".to_string());                row.insert("*".to_string(),"Error 7".to_string());    row.insert("(".to_string(),"YF".to_string());       row.insert(")".to_string(),"Error: remaining ')' after '+' token".to_string());    row.insert("$".to_string(),"Error: Expected 'id' after '+' token".to_string());
+    grammar_table.insert("T".to_string(),row);
+    row = HashMap::new();
+    row.insert("i".to_string(),"Error 2".to_string());   row.insert("+".to_string(),"".to_string());                     row.insert("*".to_string(),"YF*".to_string());      row.insert("(".to_string(),"Error: missing operator after '(' token".to_string());    row.insert(")".to_string(),"".to_string());         row.insert("$".to_string(),"".to_string());
+    grammar_table.insert("Y".to_string(),row);
+    row = HashMap::new();
+    row.insert("i".to_string(),"i".to_string());      row.insert("+".to_string(),"Error 4".to_string());                row.insert("*".to_string(),"Error: double '*' token".to_string());    row.insert("(".to_string(),")E(".to_string());      row.insert(")".to_string(),"Error: remaining ')' after '*' token".to_string());    row.insert("$".to_string(),"Error: Expected 'id' after '*' token".to_string());
+    grammar_table.insert("F".to_string(),row);
+    grammar_table
 }
 
 fn get_transitions(
@@ -101,20 +123,6 @@ fn get_input_token_array(s: &str, tokens: &Vec<String>) -> Result<Vec<String>, (
     }
 }
 
-fn get_name(state: &str) -> String {
-    match state{
-        "identifier" => "id".to_string(),
-        "number" => "number".to_string(),
-        "operator+" => "+".to_string(),
-        "operator-" => "-".to_string(),
-        "operator/" => "/".to_string(),
-        "operator*" => "*".to_string(),
-        "o_symbol" => "(".to_string(),
-        "c_symbol" => ")".to_string(),
-        _ => "".to_string()
-    }
-}
-
 fn analyze_input(
     input_token_array: &Vec<String>,
     dfa: &HashMap<String, HashMap<String, String>>,
@@ -130,161 +138,69 @@ fn analyze_input(
     for token in input_token_array {
         let next_state = &dfa[&current_state][token];
             if (!next_state.contains(current_state.as_str()) && !buffer.is_empty()) ||  (!accepted_states.contains(&current_state) && !buffer.is_empty()){ 
-                println!("token: {}     token_name: {}", buffer, get_name(&current_state));
-                data.push(get_name(&current_state));
+                println!("token: {}     token_name: {}", buffer, current_state);
+                data.push(current_state);
                 buffer = String::new();
             }
             buffer.push_str(token);
             current_state = next_state.to_string();
     }
-    println!("token: {}     token_name: {}", buffer, get_name(&current_state));
-    data.push(get_name(&current_state));
+    println!("token: {}     token_name: {}", buffer, current_state);
+    data.push(current_state);
     data.push("$".to_string());
     data
 
 }
 
-fn grammar_check(buffer: &Vec<String>) -> Result<(), ()>{
-    let mut token: String = "".to_string();
-    let mut pos = 0;
+fn grammar_check(
+    buffer: &Vec<String>,
+    grammar_table: &HashMap<String, HashMap<String,String>>
+) -> Result<(), ()>{
+    let mut pila = Vec::<String>::new();
+    let mut index = 0;
+    let non_terminal = vec!["E".to_string(),"T".to_string(),"Y".to_string(),"F".to_string(),"X".to_string()];
+    pila.push("E".to_string());
 
-    if (e(&mut pos,&buffer,&mut token) == 1) && (token == "") {
-        return Ok(());
-    }
-    Err(())
-}
-
-fn ex(
-    pos : &mut i32,
-    buffer:&Vec<String>,
-    token: &mut String)->
-    i32{
-    let actual_pos = *pos;
-    if read(pos,buffer,token) == 1{
-        if t(pos,buffer,token) == 1{
-            return ex(pos,buffer,token)
-        } else {return 0}
-    }
-    *pos = actual_pos;
-    if read(pos,buffer,token) == 2{
-        if t(pos,buffer,token) == 1{
-            return ex(pos,buffer,token)
-        } else {return 0}
-    }
-    *pos = actual_pos;
-    return 1
-}
-
-fn tx(
-    pos : &mut i32,
-    buffer:&Vec<String>,
-    token: &mut String)->
-    i32{
-    let actual_pos = *pos;
-    if read(pos,buffer,token) == 3{
-        if f(pos,buffer,token) == 1{
-            return tx(pos,buffer,token)
-        } else {return 0}
-    }
-    *pos = actual_pos;
-    if read(pos,buffer,token) == 4{
-        if f(pos,buffer,token) == 1{
-            return tx(pos,buffer,token)
-        } else {return 0}
-    }
-    *pos = actual_pos;
-    return 1
-}
-
-fn f(
-    pos : &mut i32,
-    buffer:&Vec<String>,
-    token: &mut String)->
-    i32 {
-    let actual_pos = *pos;
-    if read(pos,buffer,token) == 5 {
-      if e(pos,buffer,token) == 1 {
-        if read(pos,buffer,token) == 6 {
-          return 1
-        }
-      }
-    }
-    *pos = actual_pos;
-    if read(pos,buffer,token) == 7 {
-      return 1
-    }
-    *pos = actual_pos;
-    if read(pos,buffer,token) == 8{
-      return 1
-    }
-    return 0
-  }
-
-  fn t(
-    pos : &mut i32,
-    buffer:&Vec<String>,
-    token: &mut String)->
-    i32{
-        if f(pos,buffer,token) == 1 {
-            return tx(pos,buffer,token) 
-          }
-    return 0
-    }
-
-fn e(
-    pos : &mut i32,
-    buffer:&Vec<String>,
-    token: &mut String)->
-    i32{
-        if t(pos,buffer,token) == 1 {
-            if ex(pos,buffer,token) == 1 {
-              return 1
+    while !(pila.is_empty()){
+        let top = pila.pop().unwrap();
+        let token = &buffer[index];
+        println!("top: {}     token: {}    pila: {:?}     ", top, token, pila);
+        if !non_terminal.contains(&top){
+            if top.eq(token){
+                index = index + 1;
+            } else{
+                println!("Error: missing ')' token or expression");
+                return Err(());
             }
-          }
-        return 0
+        } else{
+            let action = &grammar_table[&top][token]; 
+            if action.contains("Error"){
+                println!("{}",action);
+                return Err(());
+            }else{
+                for chars in action.chars(){
+                    pila.push(chars.to_string());
+                }
+            }
+        }
+        // if top.eq(token){
+        //     index = index + 1;
+        // }else{
+        //     let action = &grammar_table[&top][token]; 
+        //     println!("top: {}     token: {}    pila: {:?}     action: {}", top, token, pila, action);
+            
+        //     if action.contains("Error"){
+        //         println!("{}",action);
+        //         return Err(());
+        //     }
+    
+        //     for chars in action.chars(){
+        //         pila.push(chars.to_string());
+        //     }
+        // }
     }
-
-fn read(    
-    pos : &mut i32,
-    buffer:&Vec<String>,
-    token: &mut String)-> 
-    i32{
-    if buffer[*pos as usize] == "+"{
-        *pos = *pos + 1;
-        *token = "+".to_string();
-        return 1
-    }else if buffer[*pos as usize] == "-"{
-        *pos = *pos + 1;
-        *token = "-".to_string();
-        return 2
-    }else if buffer[*pos as usize] == "/"{
-        *pos = *pos + 1;
-        *token = "/".to_string();
-        return 3
-    }else  if buffer[*pos as usize] == "*"{
-        *pos = *pos + 1;
-        *token = "*".to_string();
-        return 4
-    } else if buffer[*pos as usize] == "("{
-        *pos = *pos + 1;
-        *token = "(".to_string();
-        return 5
-    } else if buffer[*pos as usize] == ")"{
-        *pos = *pos + 1;
-        *token = ")".to_string();
-        return 6
-    } else if buffer[*pos as usize] == "number"{
-        *pos = *pos + 1;
-        *token = "number".to_string();
-        return 7
-    } else if buffer[*pos as usize] == "id"{
-        *pos = *pos + 1;
-        *token = "id".to_string();
-        return 8
-    }
-    *token = "".to_string();
-    return 0
-}  
+    Ok(())
+}
 
 pub fn validate(s: &str) -> Result<(), ()> {
     let json = get_json();
@@ -293,9 +209,10 @@ pub fn validate(s: &str) -> Result<(), ()> {
     let accepted_states: HashSet<String> = get_accepted_states(&json);
     let dfa = get_transitions(&json, &states, &tokens);
     let initial_state = json["initial_state"].as_str().unwrap().to_string();
+    let grammar_table = get_grammar_table();
     let input_token_array: Vec<String> = get_input_token_array(s, &tokens)?;
     let token_vector: Vec<String> = analyze_input(&input_token_array, &dfa, &initial_state, &accepted_states);
-    //let token_table: indexmap::IndexMap<String, (String,i32)> = validate_input_and_print_symbol_table(&input_token_array, &dfa, &initial_state, &accepted_states);
-    grammar_check(&token_vector)?;
+    println!("{:?}", token_vector);
+    grammar_check(&token_vector,&grammar_table)?;
     return Ok(());
 }
