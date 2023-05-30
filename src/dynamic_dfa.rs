@@ -31,20 +31,20 @@ fn get_grammar_table()
 -> HashMap<String, HashMap<String,String>>{
     let mut grammar_table: HashMap<String, HashMap<String,String>> = HashMap::new();
     let mut row: HashMap<String,String> = HashMap::new();
-//  |                       id                         |                              +                               |                        *                           |                       (                         |                         )                           |                       $                         |
-    row.insert("i".to_string(),"XT".to_string());      row.insert("+".to_string(),"Error: Expected 'id' before '+' token".to_string());  row.insert("*".to_string(),"Error 5".to_string());    row.insert("(".to_string(),"XT".to_string());       row.insert(")".to_string(),"Error: missing '(' token or expression".to_string());    row.insert("$".to_string(),"Error: missing expressions".to_string());
+//  |                       id                         |                                     +                                          |                               *                                    |                                       (                                             |                                           )                                        |                                       $                                        |
+    row.insert("i".to_string(),"XT".to_string());       row.insert("+".to_string(),"Error: Expected 'id' before '+' token".to_string());  row.insert("*".to_string(),"Error: Expected 'id' before '*' token".to_string());                   row.insert("(".to_string(),"XT".to_string());                                        row.insert(")".to_string(),"Error: missing '(' token or expression".to_string());    row.insert("$".to_string(),"Error: missing expressions".to_string());
     grammar_table.insert("E".to_string(),row);
     row = HashMap::new();
-    row.insert("i".to_string(),"Error 1".to_string());   row.insert("+".to_string(),"XT+".to_string());                  row.insert("*".to_string(),"Error 6".to_string());    row.insert("(".to_string(),"Error 10".to_string());    row.insert(")".to_string(),"".to_string());         row.insert("$".to_string(),"".to_string());
+    row.insert("i".to_string(),"Error 1".to_string());  row.insert("+".to_string(),"XT+".to_string());                                    row.insert("*".to_string(),"Error 6".to_string());                   row.insert("(".to_string(),"Error 10".to_string());                                  row.insert(")".to_string(),"".to_string());                                          row.insert("$".to_string(),"".to_string());
     grammar_table.insert("X".to_string(),row);
     row = HashMap::new();
-    row.insert("i".to_string(),"YF".to_string());      row.insert("+".to_string(),"Error: double '+' token".to_string());                row.insert("*".to_string(),"Error 7".to_string());    row.insert("(".to_string(),"YF".to_string());       row.insert(")".to_string(),"Error: remaining ')' after '+' token".to_string());    row.insert("$".to_string(),"Error: Expected 'id' after '+' token".to_string());
+    row.insert("i".to_string(),"YF".to_string());       row.insert("+".to_string(),"Error: double '+' token".to_string());                row.insert("*".to_string(),"Error 7".to_string());                   row.insert("(".to_string(),"YF".to_string());                                        row.insert(")".to_string(),"Error: remaining ')' after '+' token".to_string());      row.insert("$".to_string(),"Error: Expected 'id' after '+' token".to_string());
     grammar_table.insert("T".to_string(),row);
     row = HashMap::new();
-    row.insert("i".to_string(),"Error 2".to_string());   row.insert("+".to_string(),"".to_string());                     row.insert("*".to_string(),"YF*".to_string());      row.insert("(".to_string(),"Error: missing operator after '(' token".to_string());    row.insert(")".to_string(),"".to_string());         row.insert("$".to_string(),"".to_string());
+    row.insert("i".to_string(),"Error 2".to_string());  row.insert("+".to_string(),"".to_string());                                       row.insert("*".to_string(),"YF*".to_string());                       row.insert("(".to_string(),"Error: missing operator before '(' token".to_string());  row.insert(")".to_string(),"".to_string());                                          row.insert("$".to_string(),"".to_string());
     grammar_table.insert("Y".to_string(),row);
     row = HashMap::new();
-    row.insert("i".to_string(),"i".to_string());      row.insert("+".to_string(),"Error 4".to_string());                row.insert("*".to_string(),"Error: double '*' token".to_string());    row.insert("(".to_string(),")E(".to_string());      row.insert(")".to_string(),"Error: remaining ')' after '*' token".to_string());    row.insert("$".to_string(),"Error: Expected 'id' after '*' token".to_string());
+    row.insert("i".to_string(),"i".to_string());        row.insert("+".to_string(),"Error 4".to_string());                                row.insert("*".to_string(),"Error: double '*' token".to_string());   row.insert("(".to_string(),")E(".to_string());                                       row.insert(")".to_string(),"Error: remaining ')' after '*' token".to_string());      row.insert("$".to_string(),"Error: Expected 'id' after '*' token".to_string());
     grammar_table.insert("F".to_string(),row);
     grammar_table
 }
@@ -138,14 +138,14 @@ fn analyze_input(
     for token in input_token_array {
         let next_state = &dfa[&current_state][token];
             if (!next_state.contains(current_state.as_str()) && !buffer.is_empty()) ||  (!accepted_states.contains(&current_state) && !buffer.is_empty()){ 
-                println!("token: {}     token_name: {}", buffer, current_state);
+                //println!("token: {}     token_name: {}", buffer, current_state);
                 data.push(current_state);
                 buffer = String::new();
             }
             buffer.push_str(token);
             current_state = next_state.to_string();
     }
-    println!("token: {}     token_name: {}", buffer, current_state);
+    //println!("token: {}     token_name: {}", buffer, current_state);
     data.push(current_state);
     data.push("$".to_string());
     data
@@ -158,18 +158,19 @@ fn grammar_check(
 ) -> Result<(), ()>{
     let mut pila = Vec::<String>::new();
     let mut index = 0;
-    let non_terminal = vec!["E".to_string(),"T".to_string(),"Y".to_string(),"F".to_string(),"X".to_string()];
+    let terminal = vec!["+".to_string(),"*".to_string(),"(".to_string(),")".to_string(),"i".to_string(), "$".to_string()];
+    pila.push("$".to_string());
     pila.push("E".to_string());
 
     while !(pila.is_empty()){
         let top = pila.pop().unwrap();
         let token = &buffer[index];
-        println!("top: {}     token: {}    pila: {:?}     ", top, token, pila);
-        if !non_terminal.contains(&top){
+        //println!("top: {}     token: {}    pila: {:?}     ", top, token, pila);
+        if terminal.contains(&top) {
             if top.eq(token){
                 index = index + 1;
             } else{
-                println!("Error: missing ')' token or expression");
+                println!("Error: missing ')' or '(' token or expression");
                 return Err(());
             }
         } else{
@@ -183,21 +184,6 @@ fn grammar_check(
                 }
             }
         }
-        // if top.eq(token){
-        //     index = index + 1;
-        // }else{
-        //     let action = &grammar_table[&top][token]; 
-        //     println!("top: {}     token: {}    pila: {:?}     action: {}", top, token, pila, action);
-            
-        //     if action.contains("Error"){
-        //         println!("{}",action);
-        //         return Err(());
-        //     }
-    
-        //     for chars in action.chars(){
-        //         pila.push(chars.to_string());
-        //     }
-        // }
     }
     Ok(())
 }
@@ -212,7 +198,7 @@ pub fn validate(s: &str) -> Result<(), ()> {
     let grammar_table = get_grammar_table();
     let input_token_array: Vec<String> = get_input_token_array(s, &tokens)?;
     let token_vector: Vec<String> = analyze_input(&input_token_array, &dfa, &initial_state, &accepted_states);
-    println!("{:?}", token_vector);
+    //println!("{:?}", token_vector);
     grammar_check(&token_vector,&grammar_table)?;
     return Ok(());
 }
