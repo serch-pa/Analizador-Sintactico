@@ -9,13 +9,18 @@ fn read_user_input() -> String {
     input.trim().to_string()
 }
 fn main() {
-    println!("Enter a string to validate:");
-    let input: String = read_user_input();
-    if dynamic_dfa::validate(&input) == Ok(()) {
-        print!("\nValidation Result:");
-        println!(" Valid equation");
-    } else {
-        print!("\nValidation Result:");
-        println!(" Invalid equation");
+    
+    println!("\nEnter a string to validate:");
+    let mut input: String = read_user_input();
+    while input != "exit"{  
+        if dynamic_dfa::validate(&input) == Ok(()) {
+            print!("\nValidation Result:");
+            println!(" Valid equation");
+        } else {
+            print!("\nValidation Result:");
+            println!(" Invalid equation");
+        }
+        println!("\nEnter a string to validate:");
+        input = read_user_input();
     }
 }
